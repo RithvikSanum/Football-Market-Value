@@ -1,0 +1,57 @@
+# Football valuation engine — central configuration.
+# All paths are relative to the project root.
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  snapshots: data/snapshots
+  reports: reports
+  figures: reports/figures
+
+http:
+  user_agent: "football-valuation-research/0.1 (non-commercial research project; python-requests)"
+  min_delay_seconds: 1.0       # <= 1 request/sec for scraped sources
+  timeout_seconds: 60
+
+sources:
+  transfermarkt:
+    base_url: "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data"
+    archive: "transfermarkt-datasets.zip"
+    tables: [appearances, club_games, clubs, competitions, countries, game_events,
+             game_lineups, games, national_teams, player_valuations, players, transfers]
+
+training:
+  min_fee_eur: 250000
+  tm_value_lag_days: 30         # TM value must be dated >= this many days before transfer
+
+splits:
+  # Training window starts when appearance data begins (2012/13). Training stops at mid-2020 so
+  # every season after it is out-of-sample: does the model match valuations post-2020?
+  train_start: "2012-07-01"     # train: [train_start, train_end)
+  train_end: "2020-07-01"
+  val_end: "2021-07-01"         # validation (tuning + early stopping): 2020/21
+  calib_end: "2022-07-01"       # calibration (conformal intervals): 2021/22
+  # test: >= calib_end (2022/23 onward, touched once at the end)
+  current_train_end: "2025-07-01"
+  current_calib_end: "2026-07-01"
+
+contract:
+  # Kaggle snapshots with contract_expiration_date exist only from ~Nov 2022 (v193+), so contract
+  # length enters via a separate contract-adjustment model fit on 2023+ transfers, layered on top
+  # of the main pricing model (decided at checkpoint 0).
+  approach: adjustment_model
+  history_start: "2022-11-29"
+
+intervals:
+  quantiles: [0.1, 0.5, 0.9]
+  coverage: 0.8
+
+current_valuation:
+  as_of: "2026-06-30"         # source frozen at 2026-07-06; values are end-of-2025/26
+  leagues: [GB1]                # Transfermarkt competition ids
+
+fx:
+  eur_to_gbp: 0.85
+
+seed: 42

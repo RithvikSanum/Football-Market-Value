@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fv"
+version = "0.1.0"
+description = "Football player valuation engine trained on real transfer fees"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.1",
+  "pyarrow>=14",
+  "duckdb>=1.0",
+  "numpy>=1.26",
+  "pyyaml>=6",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+model = ["scikit-learn", "lightgbm", "shap", "optuna", "matplotlib", "plotly"]
+scrape = ["soccerdata", "rapidfuzz", "unidecode"]
+app = ["streamlit"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
