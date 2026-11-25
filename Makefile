@@ -1,6 +1,6 @@
 PY ?= .venv/bin/python
 
-.PHONY: setup ingest audit features train evaluate value app test all
+.PHONY: setup ingest audit features train evaluate value site test all
 
 setup:
 	python3 -m venv .venv
@@ -28,7 +28,7 @@ evaluate:
 value:
 	@echo "phase 4: not implemented yet"
 
-app:
+site:  ## static website (phase 4): export JSON + render Jinja2 templates into site/
 	@echo "phase 4: not implemented yet"
 
 test:

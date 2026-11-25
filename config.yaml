@@ -12,6 +12,7 @@ paths:
 http:
   user_agent: "football-valuation-research/0.1 (non-commercial research project; python-requests)"
   min_delay_seconds: 1.0       # <= 1 request/sec for scraped sources
+  wiki_delay_seconds: 1.0      # Wikimedia API: sequential requests; 0.1 s drew HTTP 429s
   timeout_seconds: 60
 
 sources:
@@ -20,6 +21,13 @@ sources:
     archive: "transfermarkt-datasets.zip"
     tables: [appearances, club_games, clubs, competitions, countries, game_events,
              game_lineups, games, national_teams, player_valuations, players, transfers]
+  wikidata:
+    sparql_url: "https://query.wikidata.org/sparql"
+    batch_size: 250               # TM ids per VALUES query (full P2446 scan times out)
+  wikipedia:
+    pageviews_url: "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{article}/daily/{start}/{end}"
+    start: "20150701"             # API data starts July 2015
+    end: "20260630"
 
 training:
   min_fee_eur: 250000
@@ -46,11 +54,9 @@ contract:
 market_index:
   # Real value = log(fee) - log(index at transfer date). See brief section 15.
   # Deflator used for the real-value target. "auto" = lowest validation MdAPE (see
-  # fv.models.pricing.DEFLATORS for names). Checkpoint 1 finding: auto picks "none" by 0.012 MdAPE over
-  # "hedonic nowcast" (paired-bootstrap 90% CI -0.009..+0.029, i.e. not significant; also tied on
-  # calibration). The index is kept because the model must extrapolate to price levels outside the
-  # training range; this overrides the pure validation rule and is flagged for the user's decision.
-  method: "hedonic nowcast"
+  # fv.models.pricing.DEFLATORS for names). Checkpoint 1: auto picks "none" (within noise of every
+  # hedonic variant); user decision = keep an index, segmented, which also removes the PL-buyer drift.
+  method: "hedonic nowcast + segments"
   base_date: "2026-06-30"       # "today's money": index = 1.0 on this date
   windows:                      # window fixed effects; a transfer belongs to the window containing it
     summer: {start: "06-01", end: "09-30"}

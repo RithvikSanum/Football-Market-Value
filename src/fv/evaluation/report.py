@@ -308,7 +308,7 @@ scored. All numbers below are validation (2020/21) unless stated.*
 * Splits: train < {cfg['splits']['train_end']} · validation → {cfg['splits']['val_end']} ·
   calibration → {cfg['splits']['calib_end']} · test after (untouched).
 * Target: real value = log(fee) − log(market index). Deflator used: **{meta['deflator']}**
-  (see the market-index section for why this overrides the pure validation rule).
+  (chosen at checkpoint 1 over the pure validation rule; see the market-index section).
 * Predictions are medians (exp of predicted log). MdAPE = median |pred / fee − 1|.
 * Fees are in EUR as recorded; GBP uses the ECB rate on the transfer date. Currency check: see
   `reports/data_audit.md` section 7 (fees agreed in £ were converted at the rate of the day; no
@@ -362,8 +362,9 @@ params), and the predictions converted back to money:
 its lead over the hedonic nowcast is within noise (90% CI includes 0), and on calibration all methods
 are tied. Prices in 2020–22 sat close to the training-period average, so an index cannot show its value
 there; it matters when the model has to price at levels outside its training range (test period and
-current valuations). The TM market level is clearly worst on validation. **Decision flagged for the
-user:** keep the hedonic nowcast (current setting) or follow the validation rule (no deflator).
+current valuations). The TM market level is clearly worst on validation. **Checkpoint 1 decision:**
+keep an index rather than none, using the segmented hedonic nowcast (best on calibration; it also removes
+the Premier League-buyer drift, section 4).
 
 ## 3. Price ranges (conformalized quantile regression)
 
@@ -389,9 +390,10 @@ Windows with fewer than {MIN_WINDOW_N} deals are excluded. **Drift found and par
 run flagged upward drift overall (the model over-priced post-2020 deals by ~10%). Cause: the median
 fee / TM-value ratio was ~1.2–1.4 in 2012–20 and ~1.0 from 2021, so TM values learned at the training
 ratio over-price later deals. Using the real-time ratio (`log_tm_adj`) removed the overall drift.
-**Still flagged:** PL buyers (only {int(drift.loc[drift.segment == 'PL buyers', 'windows'].iloc[0])} windows with ≥{MIN_WINDOW_N} deals):
-under-priced in 2015–17 (the Premier League TV-deal surge), close to zero since. The segmented
-deflator is the candidate fix; it was the best deflator on calibration but within noise.
+At checkpoint 1 PL buyers were still flagged (t = +2.16 with the un-segmented hedonic nowcast:
+under-priced in 2015–17, the Premier League TV-deal surge). The deflator was then switched to the
+segmented index (checkpoint 1 decision), which removed it. **Currently flagged:**
+{', '.join(f"{r.model} / {r.segment} (t = {r.t:+.2f})" for r in drift[drift.flag].itertuples()) or 'none'}.
 
 ## 5. Explanations (SHAP)
 

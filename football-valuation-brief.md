@@ -6,6 +6,7 @@ Read this whole brief before writing any code. Work through the phases in order 
 > - **v1.0** — original brief.
 > - **v1.1 (2026-11-25, after checkpoint 0)** — training window and splits changed (section 5); contract approach chosen (section 6); current valuations dated 30 June 2026 because the source is frozen (section 9).
 > - **v1.2 (2026-11-25)** — added **section 15: market level / football inflation**. Sections 5, 7, 8, 9, 10, 11, 13 and 14 updated to match. Phase 0 work from section 15 moves into Phase 1 because Phase 0 is already done.
+> - **v1.3 (2026-11-25, after checkpoint 1)** — front end changed from a Streamlit app to a **static HTML website** built by `make site` and deployed to GitHub Pages (sections 9, 10, 11 Phase 4, 12 and 15.6). Market-index deflator set to the segmented hedonic nowcast to address Premier League drift.
 
 ---
 
@@ -205,24 +206,53 @@ Build features in groups so we can run **ablation tests** (does each group actua
 
 ---
 
-## 9. App (phase 4)
+## 9. Website (phase 4)
 
-Streamlit app:
-- **Player page:**
-  - Consensus fair value with 80% range, in **£ and €** (FX rate set in config)
-  - Toggle between **"today's money"** and **"money of the time"** (section 15.6)
-  - Transfermarkt value and the % gap ("undervalued by 18%")
-  - Evaluator breakdown with spread
-  - SHAP waterfall grouped by factor
-  - 12-month forecast fan chart (bear/base/bull), split into **player vs market** contributions
-  - Comparable transfers
-  - Factor scores (see below)
-  - **Durability rating** AAA → CCC from inferred availability percentiles
-  - Inferred unavailability timeline
-- **Factor scores (0–100):** percentile within position group among current players for Quality, Experience, Age Index (closer to or before peak scores higher), Brand, Hype, Durability, Momentum, Pace (when available) and Contract (years left).
-- **Screener page:** filter by league, position, age and value; sort by gap to Transfermarkt, forecast upside or factor scores.
-- **Methodology page:** data sources, how values are made, **how the market index works**, known limitations.
-- Scope for current valuations: start with all current **Premier League** players, configurable to more leagues. Current = as of 30 June 2026 (source frozen at 6 July 2026).
+A **static HTML website** replaces the earlier Streamlit plan. The Python pipeline is unchanged; the site is a read-only view of its outputs.
+
+**Architecture**
+- `make site` exports model outputs to JSON and renders HTML pages with **Jinja2** templates into `site/`.
+- No backend server and no Node build step: plain HTML, CSS and vanilla JavaScript, plus **one** lightweight charting library (Chart.js or Apache ECharts) saved locally in `site/assets/` (not loaded from a CDN).
+- **One pre-rendered page per player** at `/players/<slug>/`, so each has a shareable URL.
+- The screener loads a **single compact JSON** file.
+- Keep the site small: round numbers and export only the fields the pages use.
+
+**Pages**
+1. **Home:** headline findings (model vs Transfermarkt on the test set, with the main chart), a player search box, and a link to the methodology.
+2. **Player page** (`/players/<slug>/`):
+   - Consensus fair value with 80% range; Transfermarkt value and the % gap ("undervalued by 18%")
+   - Evaluator breakdown with the spread between evaluators
+   - "Why this price" waterfall chart (SHAP values grouped by factor)
+   - 12-month forecast fan chart (bear/base/bull), split into **player vs market** contributions
+   - Comparable transfers
+   - Factor scores (0–100), **durability rating** AAA → CCC (from inferred-availability percentiles) and the inferred unavailability timeline
+   - "Last updated" date
+3. **Screener:** sortable, filterable table (league, position, age, value, gap, forecast upside, factor scores), all in client-side JavaScript.
+4. **Market:** transfer price index chart by segment, and "most expensive transfers adjusted for football inflation" (section 15.6).
+5. **Methodology:** data sources, how values are calculated, **how the market index works**, evaluation results, known limitations, and a statement on AI use.
+
+**Factor scores (0–100):** percentile within position group among current players for Quality, Experience, Age Index (closer to or before peak scores higher), Brand, Hype, Durability, Momentum, Pace (when available) and Contract (years left).
+
+**Design**
+- Clean and professional, like a financial research site rather than a fan site. Consistent typography and a restrained colour palette. **No club logos or player photos** (copyright).
+- Works on mobile; accessible (good contrast, alt text, keyboard navigation); light and dark mode.
+- Two in-browser toggles: **£ / €** (FX rate set in config) and **"today's money" / "money of the time"** (section 15.6).
+- Every number has a tooltip or footnote explaining what it means.
+
+**Data and terms**
+- Publish **derived outputs only** (valuations, ranges, scores, aggregated stats). Never republish raw scraped tables from Understat, SoFIFA or Transfermarkt.
+- Credit every source on the methodology page and in the footer.
+
+**Deployment**
+- A GitHub Actions workflow builds the site from **committed model outputs** and deploys it to GitHub Pages on every push to `main`.
+- **Never run the scrapers in CI.**
+
+**Testing**
+- `make site` runs without errors and produces valid HTML.
+- A test checks for broken internal links.
+- If a headless browser is available, take screenshots of the home page, a player page and the screener at desktop and mobile widths, and show them at checkpoint 4.
+
+**Scope for current valuations:** start with all current **Premier League** players, configurable to more leagues. Current = as of 30 June 2026 (source frozen at 6 July 2026).
 
 ---
 
@@ -233,7 +263,7 @@ football-valuation/
   README.md            # overview, headline findings, how to run, sources + terms, limitations
   config.yaml          # dates, thresholds, leagues, FX, rate limits, paths, market index + scenarios
   pyproject.toml       # or requirements.txt
-  Makefile             # make ingest / features / train / evaluate / value / app / all / test
+  Makefile             # make ingest / features / train / evaluate / value / site / all / test
   data/                # raw/, interim/, processed/, snapshots/ (gitignored)
     manual/            # league_revenues.csv (hand-entered, sourced; committed to git)
   src/fv/
@@ -244,12 +274,17 @@ football-valuation/
     models/            # pricing.py, intervals.py, comps.py, evaluators.py, forecast.py, archetypes.py,
                        # market_forecast.py
     evaluation/        # metrics.py, backtest.py, ablation.py, report.py
-    app/               # streamlit_app.py
-  tests/               # leakage tests, feature unit tests, small pipeline smoke test
+    site/              # export.py (model outputs -> compact JSON), build.py (Jinja2 render)
+      templates/       # base.html, home.html, player.html, screener.html, market.html, methodology.html
+      static/          # css, vanilla JS, charting library (vendored, no CDN)
+  site/                # generated static website (output of `make site`)
+  site_data/           # committed model outputs the CI site build reads (derived values only)
+  .github/workflows/   # site.yml: build site from committed outputs, deploy to GitHub Pages
+  tests/               # leakage tests, feature unit tests, small pipeline smoke test, site link test
   reports/
 ```
 
-Suggested dependencies: pandas, pyarrow, duckdb, numpy, scikit-learn, lightgbm, shap, optuna, mapie (optional), soccerdata, understat (optional), requests, rapidfuzz, unidecode, pyyaml, matplotlib, plotly, streamlit, pytest.
+Suggested dependencies: pandas, pyarrow, duckdb, numpy, scikit-learn, lightgbm, shap, optuna, mapie (optional), soccerdata, understat (optional), requests, rapidfuzz, unidecode, pyyaml, matplotlib, plotly, jinja2, pytest (plus a vendored Chart.js or ECharts file for the site).
 
 Engineering standards: type hints, logging, one CLI command per stage, idempotent and cached stages, `make all` runs end-to-end from a clean checkout.
 
@@ -290,11 +325,14 @@ Engineering standards: type hints, logging, one CLI command per stage, idempoten
 - **Run the final test-set evaluation once.**
 - **CHECKPOINT 3:** show final test results and the market-forecast backtest.
 
-**Phase 4 — App and polish**
-- Retrain for current valuations; Streamlit app
-- Inflation-adjusted records chart, money toggle, player vs market fan chart, index methodology (section 15.6)
-- README with headline findings and charts (including the index chart and the records chart); methodology page
-- **CHECKPOINT 4:** demo the app and summarise the findings.
+**Phase 4 — Website and polish**
+- Retrain for current valuations; export derived outputs to JSON
+- Static website via `make site` (section 9): home, player pages, screener, market and methodology pages
+- Inflation-adjusted records chart, £/€ and money toggles, player vs market fan chart, index methodology (section 15.6)
+- GitHub Actions workflow deploying to GitHub Pages from committed outputs (no scrapers in CI)
+- Site tests: valid HTML, no broken internal links; headless-browser screenshots if available
+- README with headline findings and charts (including the index chart and the records chart)
+- **CHECKPOINT 4:** show the site (screenshots of home, a player page and the screener at desktop and mobile widths) and summarise the findings.
 
 ---
 
@@ -304,7 +342,9 @@ Engineering standards: type hints, logging, one CLI command per stage, idempoten
 - The report compares all models against the Transfermarkt baseline on the untouched test set, with breakdowns.
 - 80% intervals have 75–85% empirical coverage on the test set (or the report explains why not).
 - Leakage tests pass, including for the market index.
-- The app shows a full player page for every current Premier League player.
+- `make site` builds the static website without errors; HTML is valid and no internal links are broken.
+- The site has a full player page for every current Premier League player, and deploys to GitHub Pages from committed outputs.
+- The site publishes derived outputs only and credits every source.
 - The README documents sources, terms, methods, findings and limitations.
 
 ---
@@ -383,7 +423,7 @@ The model predicts **real value** = `log(fee) − log(market index at the transf
 ### 15.6 Outputs (Phase 4)
 
 - Chart: **"Most expensive transfers of all time, adjusted for football inflation"**: top 20 in today's £ and €, with the original fee alongside.
-- App: toggle between "today's money" and "money of the time"; fan chart with the player vs market breakdown; methodology section explaining the index.
+- Website: toggle between "today's money" and "money of the time"; fan chart with the player vs market breakdown; methodology page explaining the index; market page with the index and records charts.
 - README: add the index chart and the inflation-adjusted records chart.
 
 ### 15.7 Config
