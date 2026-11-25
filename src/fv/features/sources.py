@@ -32,4 +32,12 @@ def connect(cutoff: str | None = None, max_date: str | None = None) -> duckdb.Du
     for t, dc in PROCESSED.items():
         w = f" WHERE {dc} < DATE '{cutoff}'" if cutoff else ""
         con.execute(f"CREATE VIEW {t} AS SELECT * FROM read_parquet('{path('processed') / (t + '.parquet')}'){w}")
+    # optional phase-2 sources (present once ingested)
+    wd = path("interim") / "wikidata_tm_enwiki.parquet"
+    if wd.exists():   # static id -> article map (no dates)
+        con.execute(f"CREATE VIEW wikidata_map AS SELECT * FROM read_parquet('{wd}')")
+    pv = path("interim") / "wiki_pageviews.parquet"
+    if pv.exists():
+        w = f" WHERE date < DATE '{cutoff}'" if cutoff else ""
+        con.execute(f"CREATE VIEW wiki_pageviews AS SELECT * FROM read_parquet('{pv}'){w}")
     return con

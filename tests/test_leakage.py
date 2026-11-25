@@ -41,7 +41,7 @@ def test_features_identical_when_future_data_removed(feats, sample):
     from fv.features import aging, sources
     from fv.features.build import build_features
 
-    curves = pd.read_csv(path("processed") / "aging_curves_position.csv")
+    curves = pd.read_csv(path("processed") / "aging_curves.csv")
     for _, row in sample.iterrows():
         t = row.transfer_date
         con = sources.connect(cutoff=str(t.date()))        # every dated table truncated at < t
@@ -108,3 +108,21 @@ def test_crowd_ratio_uses_only_earlier_deals(feats):
     part = crowd_ratio(f2)
     rows = f2.index[f2.transfer_date == f2.transfer_date.max()]
     assert np.allclose(full.loc[rows], part.loc[rows], equal_nan=True)
+
+
+def test_availability_uses_only_earlier_matches(feats):
+    """Inferred-unavailability features (incl. ongoing spells) are unchanged when data from t on is removed."""
+    from fv.features import sources
+    from fv.features.availability import AVAIL_COLS, availability_features
+
+    pick = feats[(feats.long_spells_24m > 0) | (feats.unavail_now == 1)]
+    pick = pd.concat([pick[pick.unavail_now == 1].head(4), pick.sample(6, random_state=3)])
+    assert len(pick) >= 6
+    for _, row in pick.iterrows():
+        con = sources.connect(cutoff=str(row.transfer_date.date()))
+        con.register("tg", pd.DataFrame([{"transfer_id": row.transfer_id, "player_id": row.player_id,
+                                          "t": row.transfer_date, "from_club_id": row.from_club_id}]))
+        con.execute("CREATE TEMP TABLE targets AS SELECT * FROM tg")
+        got = availability_features(con).iloc[0]
+        for c in AVAIL_COLS:
+            assert np.isclose(got[c], row[c], equal_nan=True), (row.transfer_id, c, got[c], row[c])
