@@ -45,7 +45,12 @@ contract:
 
 market_index:
   # Real value = log(fee) - log(index at transfer date). See brief section 15.
-  method: auto                  # auto = pick on validation among: hedonic, repeat_sales, tm_level
+  # Deflator used for the real-value target. "auto" = lowest validation MdAPE (see
+  # fv.models.pricing.DEFLATORS for names). Checkpoint 1 finding: auto picks "none" by 0.012 MdAPE over
+  # "hedonic nowcast" (paired-bootstrap 90% CI -0.009..+0.029, i.e. not significant; also tied on
+  # calibration). The index is kept because the model must extrapolate to price levels outside the
+  # training range; this overrides the pure validation rule and is flagged for the user's decision.
+  method: "hedonic nowcast"
   base_date: "2026-06-30"       # "today's money": index = 1.0 on this date
   windows:                      # window fixed effects; a transfer belongs to the window containing it
     summer: {start: "06-01", end: "09-30"}
@@ -84,6 +89,9 @@ market_forecast:
     base: {quantile: 0.5}
     bull: {quantile: 0.9}
     bear: {shock: largest_historical_drop}   # resolved from the index history (check 2020 COVID windows)
+
+tuning:
+  n_trials: 40                # Optuna trials per LightGBM model (expanding-window CV in train)
 
 intervals:
   quantiles: [0.1, 0.5, 0.9]

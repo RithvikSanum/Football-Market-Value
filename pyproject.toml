@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-model = ["scikit-learn", "lightgbm", "shap", "optuna", "matplotlib", "plotly"]
+model = ["scikit-learn", "lightgbm", "shap", "optuna", "matplotlib", "plotly", "tabulate"]
 scrape = ["soccerdata", "rapidfuzz", "unidecode"]
 app = ["streamlit"]
 dev = ["pytest"]
