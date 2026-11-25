@@ -8,6 +8,8 @@ setup:
 
 ingest:
 	$(PY) -m fv.ingest.transfermarkt
+	$(PY) -m fv.ingest.fx
+	$(PY) -m fv.features.currency
 
 audit: ingest
 	$(PY) -m fv.evaluation.audit

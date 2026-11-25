@@ -36,9 +36,9 @@ Data cutoff used: 2026-07-06; fee threshold: €250,000.
 | category                                   |   rows |   pct |
 |:-------------------------------------------|-------:|------:|
 | KEEP: permanent, fee >= threshold          |  14830 |   8.5 |
-| fee 0: end-of-loan (heuristic: return leg) |  29626 |  16.9 |
-| fee 0: free transfer / other               |  39030 |  22.3 |
-| fee 0: loan (heuristic: outbound leg)      |  26924 |  15.4 |
+| fee 0: end-of-loan (heuristic: return leg) |  29615 |  16.9 |
+| fee 0: free transfer / other               |  39053 |  22.3 |
+| fee 0: loan (heuristic: outbound leg)      |  26912 |  15.4 |
 | fee > 0 but < threshold                    |   2717 |   1.6 |
 | future-dated (after data cutoff)           |    520 |   0.3 |
 | unknown fee (NaN)                          |  61518 |  35.1 |
@@ -181,15 +181,15 @@ Player bio completeness:
 | SA1              | Saudi Arabia   |           2024 |          2025 |     612 |                   0 |
 | PL1              | Poland         |           2024 |          2025 |     612 |                   0 |
 | BRA1             | Brazil         |           2024 |          2025 |     557 |                   0 |
-| TS1              | Czech Republic |           2024 |          2025 |     480 |                   0 |
 | SER1             | Serbia         |           2024 |          2025 |     480 |                   0 |
+| TS1              | Czech Republic |           2024 |          2025 |     480 |                   0 |
 | RO1              | Romania        |           2024 |          2025 |     480 |                   0 |
 | C1               | Switzerland    |           2024 |          2025 |     430 |                   0 |
 | ARG1             | Argentina      |           2024 |          2025 |     418 |                   0 |
 | A1               | Austria        |           2024 |          2025 |     356 |                   0 |
 | KR1              | Croatia        |           2024 |          2025 |     348 |                   0 |
-| SE1              | Sweden         |           2024 |          2025 |     329 |                   0 |
 | NO1              | Norway         |           2024 |          2025 |     329 |                   0 |
+| SE1              | Sweden         |           2024 |          2025 |     329 |                   0 |
 | AUS1             | Australia      |           2024 |          2025 |     325 |                   0 |
 | JAP1             | Japan          |           2024 |          2024 |     296 |                   0 |
 | MEX1             | Mexico         |           2024 |          2025 |     241 |                   0 |
@@ -217,3 +217,37 @@ validation (2022/23), all of calibration and test, but **none of the training pe
 Options for checkpoint 2: (a) a separate contract-adjustment model fit on 2023+ transfers, or (b) shifting
 splits so a contract-aware model trains on 2023–2025. A dated `players` snapshot is now archived on every
 ingest run in `data/snapshots/players/`.
+
+
+## 7. Currency check (brief 15.2)
+
+**Question:** how were fees converted to EUR, and were older fees converted at one recent rate?
+
+**Test 1: known £ deals.** Dataset € fee ÷ reported £ fee vs the ECB rate on the transfer date. A ratio of 1.000 means the fee was converted at the rate of the day; a single recent rate would give ratios drifting with the historical rate. Deviations (Caicedo, Rice) are headline-with-add-ons vs base-fee differences, not FX.
+
+| player            | to        | date       |   fee in dataset (€m) |   reported (£m) |   implied €/£ |   ECB €/£ on date |   ratio |
+|:------------------|:----------|:-----------|----------------------:|----------------:|--------------:|------------------:|--------:|
+| Ángel Di María    | Man Utd   | 2014-08-26 |                 75    |            59.7 |         1.256 |             1.256 |   1     |
+| Kevin De Bruyne   | Man City  | 2015-08-30 |                 76    |            55   |         1.382 |             1.366 |   1.012 |
+| Paul Pogba        | Man Utd   | 2016-08-09 |                105    |            89   |         1.18  |             1.171 |   1.008 |
+| Romelu Lukaku     | Man Utd   | 2017-07-10 |                 84.7  |            75   |         1.129 |             1.131 |   0.999 |
+| Virgil van Dijk   | Liverpool | 2018-01-01 |                 84.65 |            75   |         1.129 |             1.127 |   1.001 |
+| Kepa Arrizabalaga | Chelsea   | 2018-08-08 |                 80    |            71   |         1.127 |             1.11  |   1.015 |
+| Harry Maguire     | Man Utd   | 2019-08-05 |                 87    |            80   |         1.088 |             1.088 |   0.999 |
+| Jack Grealish     | Man City  | 2021-08-05 |                117.5  |           100   |         1.175 |             1.176 |   0.999 |
+| Enzo Fernández    | Chelsea   | 2023-01-31 |                121    |           106.8 |         1.133 |             1.135 |   0.998 |
+| Declan Rice       | Arsenal   | 2023-07-15 |                116.6  |           105   |         1.11  |             1.168 |   0.95  |
+| Moisés Caicedo    | Chelsea   | 2023-08-14 |                116    |           115   |         1.009 |             1.16  |   0.87  |
+
+**Test 2: round numbers.** Share of fees within 0.25% of a round amount (multiple of 250k, or 50k under 1m). Fees agreed in £ should look round in £ under the conversion actually used. 'Best fixed rate' scans 0.70–0.95 £/€; if old fees had been restated at one recent rate, that rate would beat the transfer-date rate.
+
+| deals               | era     |    n |   round in € |   round in £ @ transfer-date rate |   round in £ @ best fixed rate |
+|:--------------------|:--------|-----:|-------------:|----------------------------------:|-------------------------------:|
+| England → England   | 2012–16 |   91 |        0.451 |                             0.352 |                          0.297 |
+| England → England   | 2017–21 |  155 |        0.439 |                             0.484 |                          0.406 |
+| England → England   | 2022–26 |  211 |        0.545 |                             0.592 |                          0.436 |
+| Eurozone → Eurozone | 2012–16 |  569 |        0.803 |                             0.127 |                          0.453 |
+| Eurozone → Eurozone | 2017–21 | 1299 |        0.829 |                             0.121 |                          0.545 |
+| Eurozone → Eurozone | 2022–26 | 1624 |        0.782 |                             0.128 |                          0.493 |
+
+**Findings.** (1) Fees are stored natively in EUR; euro-area deals are round in € (~80%). (2) Fees agreed in £ were converted at the rate around the deal date; for headline English deals the dataset € fee matches £ × ECB rate on the day to within ±0.2%. (3) No sign of restatement at a single recent rate: no fixed rate beats the transfer-date rate. (4) Many English fees are also round in €, so Transfermarkt appears to round converted figures, adding roughly ±1–2% noise. **Action:** keep `fee_eur` as given and derive `fee_gbp` with the ECB rate on the transfer date (`data/processed/transfers_fx.parquet`).

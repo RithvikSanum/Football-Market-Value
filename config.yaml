@@ -43,6 +43,48 @@ contract:
   approach: adjustment_model
   history_start: "2022-11-29"
 
+market_index:
+  # Real value = log(fee) - log(index at transfer date). See brief section 15.
+  method: auto                  # auto = pick on validation among: hedonic, repeat_sales, tm_level
+  base_date: "2026-06-30"       # "today's money": index = 1.0 on this date
+  windows:                      # window fixed effects; a transfer belongs to the window containing it
+    summer: {start: "06-01", end: "09-30"}
+    winter: {start: "01-01", end: "02-15"}
+    # dates outside both windows are assigned to the most recent window (e.g. off-window free-agent deals)
+  min_history_windows: 6        # windows needed before the rolling fit starts producing levels
+  segments:
+    buyer: {pl_buyer: "to_league == 'GB1'", other_buyer: "to_league != 'GB1'"}
+    tier:
+      top_end_quantile: 0.90    # top 10% of fees, threshold from earlier windows only
+  shrinkage_pseudo_count: 50    # partial pooling: segment weight = n / (n + pseudo_count)
+  repeat_sales:
+    max_gap_years: 6
+    controls: [age_change, minutes_share_change]
+  tm_level:
+    leagues: [GB1, ES1, IT1, L1, FR1]
+    statistic: median
+  nowcast:
+    shrinkage_pseudo_count: 50  # current-window deals vs carried-forward level
+    use_tm_level_movement: true
+
+fx:
+  source: ecb                   # ECB euro reference rates (Data Portal SDMX API); fallback: frankfurter
+  ecb_url: "https://data-api.ecb.europa.eu/service/data/EXR/D.{cur}.EUR.SP00.A?format=csvdata"
+  frankfurter_url: "https://api.frankfurter.app"
+  currencies: [GBP]
+  eur_to_gbp: 0.85              # fallback only for display when no dated rate applies
+
+market_forecast:
+  horizons_years: [1, 2, 3]
+  revenues_csv: data/manual/league_revenues.csv
+  monte_carlo:
+    n_paths: 10000
+    seed: 42
+  scenarios:
+    base: {quantile: 0.5}
+    bull: {quantile: 0.9}
+    bear: {shock: largest_historical_drop}   # resolved from the index history (check 2020 COVID windows)
+
 intervals:
   quantiles: [0.1, 0.5, 0.9]
   coverage: 0.8
@@ -50,8 +92,5 @@ intervals:
 current_valuation:
   as_of: "2026-06-30"         # source frozen at 2026-07-06; values are end-of-2025/26
   leagues: [GB1]                # Transfermarkt competition ids
-
-fx:
-  eur_to_gbp: 0.85
 
 seed: 42

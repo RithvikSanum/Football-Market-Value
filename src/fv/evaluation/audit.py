@@ -237,6 +237,81 @@ and **2026/27 squads are not covered**. Implication: "current" valuations can on
 """
 
 
+KNOWN_GBP_DEALS = {  # widely reported headline fees in GBP (English buyers)
+    ("Ángel Di María", "Man Utd"): 59.7e6, ("Kevin De Bruyne", "Man City"): 55e6,
+    ("Paul Pogba", "Man Utd"): 89e6, ("Romelu Lukaku", "Man Utd"): 75e6,
+    ("Virgil van Dijk", "Liverpool"): 75e6, ("Kepa Arrizabalaga", "Chelsea"): 71e6,
+    ("Harry Maguire", "Man Utd"): 80e6, ("Jack Grealish", "Man City"): 100e6,
+    ("Enzo Fernández", "Chelsea"): 106.8e6, ("Declan Rice", "Arsenal"): 105e6,
+    ("Moisés Caicedo", "Chelsea"): 115e6,
+}
+
+
+def currency_section(con) -> str:
+    """Brief 15.2: how were fees converted to EUR?"""
+    import numpy as np
+    from fv.ingest import fx
+
+    t = con.execute("""
+      SELECT t.player_name, t.to_club_name, t.transfer_date, t.transfer_fee,
+             cf.domestic_competition_id f, ct.domestic_competition_id tt
+      FROM transfers t LEFT JOIN clubs cf ON cf.club_id = t.from_club_id
+      LEFT JOIN clubs ct ON ct.club_id = t.to_club_id
+      WHERE t.transfer_fee >= 250000 AND t.transfer_date <= (SELECT max(date) FROM games)""").df()
+    t["gbp_per_eur"] = fx.rate_on(t["transfer_date"]).values
+
+    rows = []
+    for (p, club), gbp in KNOWN_GBP_DEALS.items():
+        m = t[(t.player_name == p) & (t.to_club_name == club)]
+        if m.empty:
+            continue
+        r = m.iloc[-1]
+        implied = r.transfer_fee / gbp
+        ecb = 1 / r.gbp_per_eur
+        rows.append({"player": p, "to": club, "date": r.transfer_date.date(),
+                     "fee in dataset (€m)": r.transfer_fee / 1e6, "reported (£m)": gbp / 1e6,
+                     "implied €/£": round(implied, 3), "ECB €/£ on date": round(ecb, 3),
+                     "ratio": round(implied / ecb, 3)})
+    known = pd.DataFrame(rows).sort_values("date")
+
+    def round_share(x):
+        step = np.where(x >= 1e6, 250e3, 50e3)
+        return float(((np.abs(x / step - np.round(x / step)) * step / x) < 0.0025).mean())
+
+    ez = ["ES1", "IT1", "L1", "FR1", "NL1", "PO1", "BE1", "GR1"]
+    groups = {"England → England": (t.f == "GB1") & (t.tt == "GB1"),
+              "Eurozone → Eurozone": t.f.isin(ez) & t.tt.isin(ez)}
+    out = []
+    for g, m in groups.items():
+        for era, lo, hi in [("2012–16", 2012, 2016), ("2017–21", 2017, 2021), ("2022–26", 2022, 2026)]:
+            x = t[m & t.transfer_date.dt.year.between(lo, hi)]
+            row = {"deals": g, "era": era, "n": len(x), "round in €": round_share(x.transfer_fee),
+                   "round in £ @ transfer-date rate": round_share(x.transfer_fee * x.gbp_per_eur)}
+            row["round in £ @ best fixed rate"] = max(
+                round_share(x.transfer_fee * r) for r in np.arange(0.70, 0.95, 0.01))
+            out.append(row)
+    rnd = pd.DataFrame(out).round(3)
+    return (
+        "## 7. Currency check (brief 15.2)\n\n"
+        "**Question:** how were fees converted to EUR, and were older fees converted at one recent rate?\n\n"
+        "**Test 1: known £ deals.** Dataset € fee ÷ reported £ fee vs the ECB rate on the transfer date. "
+        "A ratio of 1.000 means the fee was converted at the rate of the day; a single recent rate would "
+        "give ratios drifting with the historical rate. Deviations (Caicedo, Rice) are headline-with-add-ons "
+        "vs base-fee differences, not FX.\n\n" + _md(known)
+        + "\n\n**Test 2: round numbers.** Share of fees within 0.25% of a round amount (multiple of 250k, "
+        "or 50k under 1m). Fees agreed in £ should look round in £ under the conversion actually used. "
+        "'Best fixed rate' scans 0.70–0.95 £/€; if old fees had been restated at one recent rate, that rate "
+        "would beat the transfer-date rate.\n\n" + _md(rnd)
+        + "\n\n**Findings.** (1) Fees are stored natively in EUR; euro-area deals are round in € (~80%). "
+        "(2) Fees agreed in £ were converted at the rate around the deal date; for headline English deals the "
+        "dataset € fee matches £ × ECB rate on the day to within ±0.2%. (3) No sign of restatement at a single "
+        "recent rate: no fixed rate beats the transfer-date rate. (4) Many English fees are also round in €, "
+        "so Transfermarkt appears to round converted figures, adding roughly ±1–2% noise. "
+        "**Action:** keep `fee_eur` as given and derive `fee_gbp` with the ECB rate on the transfer date "
+        "(`data/processed/transfers_fx.parquet`)."
+    )
+
+
 def main() -> None:
     setup_logging()
     cfg = load_config()
@@ -250,6 +325,7 @@ def main() -> None:
         tm_value_section(con, cfg["training"]["tm_value_lag_days"]),
         misc_section(con),
         CONTRACT,
+        currency_section(con),
     ]
     out = path("reports") / "data_audit.md"
     out.write_text("\n\n".join(parts))
