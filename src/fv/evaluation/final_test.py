@@ -13,6 +13,10 @@ recorded in the report. Steps:
    step 2 is frozen; reported separately).
 7. Market-forecast backtest summary (one-year-ahead vs no change).
 Writes reports/final_report.md and figures.
+
+--dry-run: exercises every code path WITHOUT touching test data: test rows are dropped, calibration
+rows stand in for "test" (and calibration snapshots for test snapshots), no marker is written and the
+report goes to the scratch file reports/_dry_run_final_report.md (git-ignored).
 """
 from __future__ import annotations
 
@@ -139,21 +143,25 @@ def fig_market_fan() -> str:
 
 
 # --------------------------------------------------------------------------- main
-def main(force: bool = False) -> None:
+def main(force: bool = False, dry: bool = False) -> None:
     setup_logging()
     cfg = load_config()
     marker = path("processed") / MARKER
-    if marker.exists() and not force:
+    if marker.exists() and not force and not dry:
         raise SystemExit(f"final test already run ({marker.read_text()}); use --force to re-run")
     meta = json.loads((path("processed") / "pricing_meta.json").read_text())
     df = load_dataset()
     df["log_index"] = deflator(df, meta["deflator"])
     df["y"] = df.log_fee - df.log_index
+    if dry:
+        df = df[df.split != "test"].copy()
 
     # snapshot rows (for the signal backtest), priced with the same models
     from fv.features.snapshots import index_at  # noqa: F401  (index already in the panel)
     snap = pd.read_parquet(path("processed") / "snapshot_panel.parquet")
     snap["t"] = pd.to_datetime(snap.t)
+    if dry:
+        snap = snap[snap.t < pd.Timestamp(cfg["forecast"]["test_first"])].copy()
     preds, sp = refit_pricing(df, meta, cfg, extra=snap)
 
     # 1. reproduction check on validation
@@ -165,6 +173,8 @@ def main(force: bool = False) -> None:
     log.info("reproduction check (val, max |log diff|): %.2e", repro)
 
     res = pd.concat([df, preds], axis=1)
+    if dry:   # calibration rows play the part of the test set
+        res["split"] = res.split.replace({"calib": "test"})
     te = res[res.split == "test"]
     common = te[te.tm_baseline.notna()]
     names = MODELS | {"TM transfers-table value (leaky, reference)": "tm_transfers_table"}
@@ -239,7 +249,7 @@ def main(force: bool = False) -> None:
     # 4. forecast metrics on test
     from fv.models.forecast import metrics as fmetrics
     fp = pd.read_parquet(path("processed") / "forecast_predictions.parquet")
-    ft = fp[(fp.split == "test") & fp.y_real.notna()]
+    ft = fp[(fp.split == ("calib" if dry else "test")) & fp.y_real.notna()]
     f_rows = [{"model": lab, **fmetrics(ft.y_real.values, ft[c].values)}
               for lab, c in (("no change", "pred_no_change"), ("age curve", "pred_age_curve"),
                              ("LightGBM", "pred_lgb"))]
@@ -252,7 +262,8 @@ def main(force: bool = False) -> None:
     s = s.merge(fp[["transfer_id", "y_real", "pred_age_curve"]], on="transfer_id", how="left")
     s["model_value"] = np.exp(s.lgb_tm_real + s.log_index)
     s["ratio"] = np.log(s.model_value / s.tm_now)
-    stest = s[(s.t >= pd.Timestamp(cfg["forecast"]["test_first"])) & s.ratio.notna()].copy()
+    t0 = pd.Timestamp(cfg["forecast"]["calib_dates"][0] if dry else cfg["forecast"]["test_first"])
+    stest = s[(s.t >= t0) & s.ratio.notna()].copy()
     q = cfg["forecast"]["signal_top_quantile"]
     stest["flag"] = stest.groupby("t").ratio.transform(lambda r: r >= r.quantile(q))
     sold = stest.sale_fee_12m.notna()
@@ -271,6 +282,11 @@ def main(force: bool = False) -> None:
     fl, ot = stest[stest.flag].y_fwd12.dropna().values, stest[~stest.flag].y_fwd12.dropna().values
     diffs = [np.median(rng.choice(fl, len(fl))) - np.median(rng.choice(ot, len(ot))) for _ in range(1000)]
     sig_ci = np.quantile(diffs, [0.05, 0.95])
+    # age-adjusted: the player part of the change minus the age-curve expectation
+    fa = stest[stest.flag].eval("y_real - pred_age_curve").dropna().values
+    oa = stest[~stest.flag].eval("y_real - pred_age_curve").dropna().values
+    adj_diffs = [np.median(rng.choice(fa, len(fa))) - np.median(rng.choice(oa, len(oa))) for _ in range(1000)]
+    adj_d, adj_ci = float(np.median(fa) - np.median(oa)), np.quantile(adj_diffs, [0.05, 0.95])
 
     # 6. contract adjustment (forward-chained inside test; after the frozen test scoring above)
     from fv.features.contract import contract_at_transfer
@@ -292,7 +308,8 @@ def main(force: bool = False) -> None:
                        "n": len(sc), "MdAPE_main": scores(sc.fee_eur, sc.lgb_tm)["MdAPE"],
                        "MdAPE_with_contract": scores(sc.fee_eur, adj)["MdAPE"],
                        "beta_years_left": beta[1], "beta_le1y": beta[2]})
-    contract_t = pd.DataFrame(c_rows)
+    contract_t = pd.DataFrame(c_rows, columns=["season", "fit_on", "n", "MdAPE_main", "MdAPE_with_contract",
+                                               "beta_years_left", "beta_le1y"])
 
     # 7. market backtest
     mb = pd.read_csv(path("processed") / "market_backtest_summary.csv")
@@ -337,8 +354,9 @@ All test deals (statistical models):
 
 ## 2. Evaluators and consensus (test, deals with all three evaluators)
 
-Consensus weights (1 / validation MAE, log): {', '.join(f"{k} {v:.2f}" for k, v in w['weights'].items())}
-(validation n = {w['n_common']}).
+Consensus weights (stacking: convex blend with the lowest validation MAE in logs):
+{', '.join(f"{k} {v:.2f}" for k, v in w['weights'].items())} (validation n = {w['n_common']}; inverse-MAE
+weights would have been {', '.join(f"{k} {v:.2f}" for k, v in w['inverse_mae_weights'].items())}).
 
 {_md(ev_t)}
 
@@ -365,6 +383,9 @@ Difference in median 12-month TM change (flagged − others): {np.median(fl) - n
 points (bootstrap 90% CI {sig_ci[0]:+.3f} to {sig_ci[1]:+.3f}); flagged group ahead on {hit:.0%} of
 test snapshot dates.
 
+**Age-adjusted** (player part of the change minus the age-curve expectation, so the flag is not simply
+"young players"): flagged − others = {adj_d:+.3f} log points (90% CI {adj_ci[0]:+.3f} to {adj_ci[1]:+.3f}).
+
 ## 5. Contract adjustment (forward-chained inside the test period)
 
 Fitted on the main model's log residual (years left capped at 4, ≤ 1 year flag, age), on earlier test
@@ -382,6 +403,10 @@ One-year-ahead backtest of the real-time index (log points; `MAE_common` = same 
 
 {_md(mf[['horizon_years', 'origin', 'p10', 'base', 'bull', 'bear', 'bear_from', 'bear_to', 'drift_mode']], {'p10': '{:+.3f}', 'base': '{:+.3f}', 'bull': '{:+.3f}', 'bear': '{:+.3f}'})}
 """
+    if dry:
+        (path("reports") / "_dry_run_final_report.md").write_text(md)
+        log.info("dry run OK (no test data used, nothing saved)")
+        return
     (path("reports") / "final_report.md").write_text(md)
     res[res.split == "test"][["transfer_id", "fee_eur", *preds.columns]].to_parquet(
         path("processed") / "predictions_test.parquet", index=False)
@@ -394,4 +419,6 @@ One-year-ahead backtest of the real-time index (log points; `MAE_common` = same 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
-    main(ap.parse_args().force)
+    ap.add_argument("--dry-run", action="store_true")
+    a = ap.parse_args()
+    main(a.force, a.dry_run)

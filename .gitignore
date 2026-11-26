@@ -7,3 +7,4 @@ data/*
 !data/manual/
 .DS_Store
 site/
+reports/_dry_run_final_report.md
