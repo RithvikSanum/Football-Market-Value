@@ -1,6 +1,6 @@
 PY ?= .venv/bin/python
 
-.PHONY: setup ingest audit features train evaluate value site test all
+.PHONY: setup ingest audit features train evaluate phase3 final-test value site test all
 
 setup:
 	python3 -m venv .venv
@@ -31,6 +31,14 @@ evaluate:
 	$(PY) -m fv.evaluation.ablation
 	$(PY) -m fv.evaluation.phase2_report
 
+phase3:  ## snapshot panel, 12-month forecast, market forecast (no test scoring)
+	$(PY) -m fv.features.snapshots
+	$(PY) -m fv.models.forecast
+	$(PY) -m fv.models.market_forecast
+
+final-test:  ## the ONE scoring of the test split (refuses to re-run without --force)
+	$(PY) -m fv.evaluation.final_test
+
 value:
 	@echo "phase 4: not implemented yet"
 
@@ -40,4 +48,4 @@ site:  ## static website (phase 4): export JSON + render Jinja2 templates into s
 test:
 	$(PY) -m pytest -q
 
-all: ingest audit features train evaluate value test
+all: ingest audit features train evaluate phase3 final-test value test

@@ -10,8 +10,10 @@ Models
 - baseline "no change": 0
 - baseline "age curve": change on the player's sub-position value curve from age to age + 1, plus the
   train-period mean of (y_real - curve change) (curves are demeaned by year)
-- LightGBM (point = median quantile), quantiles 0.1 / 0.5 / 0.9 + CQR on the calibration snapshots
-  -> bear / base / bull. Features: all pricing groups A-G plus the TM value at t.
+- LightGBM on the *residual from the age-curve baseline* (quantiles 0.1 / 0.5 / 0.9 of
+  y_real - baseline, then the baseline is added back) + CQR on the calibration snapshots -> bear / base /
+  bull. Features: all pricing groups A-G, the TM value at t and the 1-year age-curve change. (Chosen on
+  validation: plain LightGBM only tied the age curve; residual learning beat it on val and calib.)
 Splits by snapshot date (config forecast.*); targets of training dates are realised before
 pricing train_end. Test rows are predicted but never scored here (fv.evaluation.final_test does that).
 Output: data/processed/forecast_predictions.parquet, forecast_meta.json, forecast_val_metrics.csv
@@ -37,7 +39,7 @@ PARAMS = dict(n_estimators=4000, learning_rate=0.03, num_leaves=31, min_child_sa
 
 def forecast_features() -> list[str]:
     f = [c for c in features_for(TM_CORRECTED) if c != "log_tm_adj"]
-    return f + ["log_tm_now"]
+    return f + ["log_tm_now", "age_curve_1y"]
 
 
 def assign_split(t: pd.Series, cfg: dict) -> pd.Series:
@@ -98,9 +100,12 @@ def main() -> None:
     log.info("forecast rows with target: %s", p[has].split.value_counts().to_dict())
 
     curve = age_curve_change(p)
+    p["age_curve_1y"] = curve
+    tr, va, ca = (p[has & (p.split == s)] for s in ("train", "val", "calib"))
     k = float(np.nanmean(tr.y_real - curve.loc[tr.index]))
     p["pred_no_change"] = 0.0
-    p["pred_age_curve"] = curve + k
+    p["pred_age_curve"] = (curve + k).fillna(k)
+    base = p.pred_age_curve
 
     Xtr, cats = lgb_frame(tr, feats)
     Xva, _ = lgb_frame(va, feats, cats)
@@ -108,9 +113,9 @@ def main() -> None:
     preds, iters = {}, {}
     for q in cfg["intervals"]["quantiles"]:
         m = lgb.LGBMRegressor(objective="quantile", alpha=q, random_state=cfg["seed"], verbose=-1, **PARAMS)
-        m.fit(Xtr, tr.y_real, eval_X=(Xva,), eval_y=(va.y_real,), eval_metric="quantile",
-              callbacks=[lgb.early_stopping(100, verbose=False)])
-        preds[q], iters[q] = m.predict(Xall), int(m.best_iteration_)
+        m.fit(Xtr, tr.y_real - base.loc[tr.index], eval_X=(Xva,), eval_y=(va.y_real - base.loc[va.index],),
+              eval_metric="quantile", callbacks=[lgb.early_stopping(100, verbose=False)])
+        preds[q], iters[q] = m.predict(Xall) + base.values, int(m.best_iteration_)
         if q == 0.5:
             m.booster_.save_model(str(path("processed") / "model_forecast_q50.txt"))
             imp = pd.Series(m.booster_.feature_importance("gain"), index=feats).sort_values(ascending=False)
