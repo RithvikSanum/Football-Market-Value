@@ -16,7 +16,11 @@ audit: ingest
 
 features: ingest
 	$(PY) -m fv.features.elo
-	$(PY) -m fv.features.build
+	$(PY) -m fv.features.build          # pass 1 fixes the transfer universe (player ids)
+	$(PY) -m fv.ingest.wikidata         # TM id -> enwiki article (cached)
+	$(PY) -m fv.ingest.wikipedia        # page views for universe + current players (cached)
+	$(PY) -m fv.ingest.contracts        # dated players.csv snapshots from Kaggle versions (cached)
+	$(PY) -m fv.features.build          # pass 2 with hype
 	$(PY) -m fv.features.market_index
 
 train: features
@@ -24,6 +28,8 @@ train: features
 
 evaluate:
 	$(PY) -m fv.evaluation.report
+	$(PY) -m fv.evaluation.ablation
+	$(PY) -m fv.evaluation.phase2_report
 
 value:
 	@echo "phase 4: not implemented yet"
