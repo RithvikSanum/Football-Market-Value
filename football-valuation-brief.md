@@ -7,6 +7,7 @@ Read this whole brief before writing any code. Work through the phases in order 
 > - **v1.1 (2026-11-25, after checkpoint 0)** — training window and splits changed (section 5); contract approach chosen (section 6); current valuations dated 30 June 2026 because the source is frozen (section 9).
 > - **v1.2 (2026-11-25)** — added **section 15: market level / football inflation**. Sections 5, 7, 8, 9, 10, 11, 13 and 14 updated to match. Phase 0 work from section 15 moves into Phase 1 because Phase 0 is already done.
 > - **v1.3 (2026-11-25, after checkpoint 1)** — front end changed from a Streamlit app to a **static HTML website** built by `make site` and deployed to GitHub Pages (sections 9, 10, 11 Phase 4, 12 and 15.6). Market-index deflator set to the segmented hedonic nowcast to address Premier League drift.
+> - **v1.4 (2026-11-26, during phase 2)** — Understat is down and SoFIFA blocks automated access, so pace, archetypes and pace decline curves (group I) are **deferred**, and Understat xG will be retried later. The age index is made profile-aware by sub-position instead of archetype for now.
 
 ---
 

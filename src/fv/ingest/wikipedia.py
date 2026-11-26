@@ -21,7 +21,7 @@ import requests
 from fv.config import load_config, path, setup_logging
 
 log = logging.getLogger(__name__)
-SHARD = 200
+SHARD = 50
 
 
 def needed_player_ids() -> set[int]:
@@ -35,12 +35,25 @@ def needed_player_ids() -> set[int]:
     return ids | set(cur.player_id)
 
 
+def user_agent(cfg: dict) -> str:
+    """Wikimedia's 2026 rate limits give 200 req/min only to a *compliant* User-Agent, i.e. one with
+    contact details (email or URL); without it a client counts as unidentified (10 req/min)."""
+    contact = (cfg["http"].get("contact") or "").strip()
+    ua = cfg["http"]["user_agent"]
+    return f"{ua.split(' (')[0]} ({contact}; non-commercial research) python-requests" if contact else ua
+
+
 def _fetch(sess: requests.Session, article: str, cfg: dict) -> pd.DataFrame:
     w = cfg["sources"]["wikipedia"]
     url = w["pageviews_url"].format(article=quote(article.replace(" ", "_"), safe=""),
                                     start=w["start"], end=w["end"])
     for attempt in range(5):
-        r = sess.get(url, timeout=cfg["http"]["timeout_seconds"])
+        try:
+            r = sess.get(url, timeout=cfg["http"]["timeout_seconds"])
+        except requests.exceptions.RequestException as e:   # dropped connection / timeout
+            log.warning("%s for %s; retry in %ss", type(e).__name__, article, 30 * (attempt + 1))
+            time.sleep(30 * (attempt + 1))
+            continue
         if r.status_code == 404:            # no views recorded for this title in the range
             return pd.DataFrame(columns=["article", "date", "views"])
         if r.status_code == 429 or r.status_code >= 500:
@@ -67,7 +80,7 @@ def download() -> None:
     todo = sorted(set(m.article.dropna()) - done)
     log.info("articles: %d total, %d cached, %d to fetch", m.article.notna().sum(), len(done), len(todo))
     sess = requests.Session()
-    sess.headers["User-Agent"] = cfg["http"]["user_agent"]
+    sess.headers["User-Agent"] = user_agent(cfg)
     delay = cfg["http"].get("wiki_delay_seconds", 0.1)
     buf, names = [], []
     n_shard = len(list(raw.glob("shard_*.parquet")))
@@ -83,8 +96,14 @@ def download() -> None:
         n_shard += 1
         buf, names = [], []
 
+    failed = []
     for i, art in enumerate(todo, 1):
-        d = _fetch(sess, art, cfg)
+        try:
+            d = _fetch(sess, art, cfg)
+        except RuntimeError as e:          # not marked done: retried on the next run
+            log.warning("%s; skipping for now", e)
+            failed.append(art)
+            continue
         if len(d):
             buf.append(d)
         names.append(art)
@@ -93,6 +112,8 @@ def download() -> None:
             flush()
             log.info("pageviews %d/%d", i, len(todo))
     flush()
+    if failed:
+        log.warning("%d articles failed this run (re-run to retry): %s", len(failed), failed[:10])
     combine()
 
 
