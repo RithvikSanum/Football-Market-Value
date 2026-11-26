@@ -13,7 +13,7 @@ http:
   user_agent: "football-valuation-research/0.1 (non-commercial research project; python-requests)"
   min_delay_seconds: 1.0       # <= 1 request/sec for scraped sources
   wiki_delay_seconds: 1.0      # Wikimedia API: sequential requests; 0.1 s drew HTTP 429s
-  contact: ""                  # email or project URL for the Wikimedia User-Agent (compliant UA = 200 req/min,
+  contact: "https://github.com/RithvikSanum/Football-Market-Value"  # project URL for the Wikimedia User-Agent (compliant UA = 200 req/min,
                                # none = 10 req/min). Left empty until the user chooses what to publish.
   timeout_seconds: 60
 
