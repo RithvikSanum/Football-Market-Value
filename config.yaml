@@ -92,6 +92,7 @@ market_forecast:
   revenues_csv: data/manual/league_revenues.csv
   monte_carlo:
     n_paths: 10000
+    drift: auto                 # auto = historical drift only if it beats no-change in the 1y backtest
     seed: 42
   scenarios:
     base: {quantile: 0.5}
@@ -110,3 +111,13 @@ current_valuation:
   leagues: [GB1]                # Transfermarkt competition ids
 
 seed: 42
+
+forecast:                       # phase 3: 12-month value forecast (brief section 7)
+  min_value_eur: 1000000        # snapshot panel: players valued >= this at a core-league club
+  snapshot_months: [1, 7]       # 1 Jan / 1 Jul
+  # snapshot-date splits: the 12-month target must be realised before the next split starts
+  train_last: "2019-07-01"      # targets realised by 2020-07-01 (= pricing train_end)
+  val_dates: ["2020-01-01", "2020-07-01"]
+  calib_dates: ["2021-01-01", "2021-07-01", "2022-01-01"]
+  test_first: "2022-07-01"      # test snapshots 2022-07 .. 2025-07 (scored once)
+  signal_top_quantile: 0.9      # undervalued flag: model / TM ratio in the top decile per date
