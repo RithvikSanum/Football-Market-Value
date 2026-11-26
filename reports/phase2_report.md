@@ -132,23 +132,23 @@ The signal is strong. Fee relative to the TM value (≥ 30 days before) by years
 
 | model                 | variant                                 |   val_MdAPE |   val_diff_vs_full |   val_diff_90lo |   val_diff_90hi |   calib_MdAPE |   calib_diff_vs_full |
 |:----------------------|:----------------------------------------|------------:|-------------------:|----------------:|----------------:|--------------:|---------------------:|
-| LightGBM stats-only   | full                                    |        47.9 |                0   |             0   |             0   |          48.8 |                  0   |
-| LightGBM stats-only   | − A_base                                |        66.8 |               18.8 |            15.2 |            23   |          61.2 |                 12.4 |
-| LightGBM stats-only   | − B_performance                         |        49.9 |                2   |             0.2 |             3.8 |          49.5 |                  0.7 |
-| LightGBM stats-only   | − C_experience                          |        48.4 |                0.4 |            -1.1 |             1.8 |          49.6 |                  0.8 |
-| LightGBM stats-only   | − D_age_index                           |        49   |                1.1 |            -0.2 |             2.1 |          47.9 |                 -0.9 |
-| LightGBM stats-only   | − E_hype                                |        47.9 |                0   |             0   |             0   |          48.8 |                  0   |
-| LightGBM stats-only   | − F_availability                        |        48   |                0.1 |            -0.9 |             1.2 |          48.5 |                 -0.3 |
-| LightGBM stats-only   | phase-1 set (no E_hype, F_availability) |        48   |                0.1 |            -0.9 |             1.2 |          48.5 |                 -0.3 |
-| LightGBM TM-corrected | full                                    |        41.9 |                0   |             0   |             0   |          41.6 |                  0   |
-| LightGBM TM-corrected | − A_base                                |        48   |                6.2 |             3.5 |             8.3 |          44   |                  2.4 |
-| LightGBM TM-corrected | − B_performance                         |        42.4 |                0.6 |            -1.2 |             1.7 |          41.8 |                  0.1 |
-| LightGBM TM-corrected | − C_experience                          |        42.9 |                1   |            -1.2 |             1.9 |          40.7 |                 -0.9 |
-| LightGBM TM-corrected | − D_age_index                           |        41.1 |               -0.8 |            -2.1 |             0.8 |          41.6 |                 -0.1 |
-| LightGBM TM-corrected | − E_hype                                |        41.9 |                0   |             0   |             0   |          41.6 |                  0   |
-| LightGBM TM-corrected | − F_availability                        |        41.6 |               -0.3 |            -1.8 |             1.6 |          40.2 |                 -1.5 |
-| LightGBM TM-corrected | − G_momentum                            |        42.1 |                0.2 |            -1.8 |             1.1 |          41.1 |                 -0.5 |
-| LightGBM TM-corrected | − H_crowd                               |        48.7 |                6.9 |             4.1 |             9.5 |          47.5 |                  5.9 |
-| LightGBM TM-corrected | phase-1 set (no E_hype, F_availability) |        41.6 |               -0.3 |            -1.8 |             1.6 |          40.2 |                 -1.5 |
+| LightGBM stats-only   | full                                    |        46.8 |                0   |             0   |             0   |          45.5 |                  0   |
+| LightGBM stats-only   | − A_base                                |        60.2 |               13.3 |            10.3 |            17.2 |          52.8 |                  7.3 |
+| LightGBM stats-only   | − B_performance                         |        47.6 |                0.7 |            -0.7 |             2.5 |          44.7 |                 -0.8 |
+| LightGBM stats-only   | − C_experience                          |        46.4 |               -0.5 |            -1.1 |             1.5 |          45.8 |                  0.3 |
+| LightGBM stats-only   | − D_age_index                           |        46.2 |               -0.6 |            -1.5 |             0.9 |          45.5 |                 -0   |
+| LightGBM stats-only   | − E_hype                                |        49.9 |                3   |             0.5 |             5.4 |          47.9 |                  2.4 |
+| LightGBM stats-only   | − F_availability                        |        46.9 |                0.1 |            -0.8 |             1.8 |          44.8 |                 -0.7 |
+| LightGBM stats-only   | phase-1 set (no E_hype, F_availability) |        49.8 |                2.9 |             0.9 |             5.7 |          48.7 |                  3.2 |
+| LightGBM TM-corrected | full                                    |        41.1 |                0   |             0   |             0   |          38.6 |                  0   |
+| LightGBM TM-corrected | − A_base                                |        46.3 |                5.2 |             3.2 |             7.5 |          42.8 |                  4.2 |
+| LightGBM TM-corrected | − B_performance                         |        41.7 |                0.6 |            -1.1 |             1.2 |          39.7 |                  1.1 |
+| LightGBM TM-corrected | − C_experience                          |        40   |               -1.1 |            -2.1 |            -0.2 |          39.7 |                  1.1 |
+| LightGBM TM-corrected | − D_age_index                           |        41.3 |                0.1 |            -1.3 |             0.9 |          40.4 |                  1.9 |
+| LightGBM TM-corrected | − E_hype                                |        41.4 |                0.2 |            -1.2 |             1.7 |          41   |                  2.4 |
+| LightGBM TM-corrected | − F_availability                        |        41.3 |                0.2 |            -1.2 |             0.8 |          39.9 |                  1.3 |
+| LightGBM TM-corrected | − G_momentum                            |        40.3 |               -0.8 |            -2.1 |             0.7 |          39.4 |                  0.9 |
+| LightGBM TM-corrected | − H_crowd                               |        46.4 |                5.3 |             3   |             7   |          45.4 |                  6.8 |
+| LightGBM TM-corrected | phase-1 set (no E_hype, F_availability) |        41.9 |                0.8 |            -1.3 |             2.1 |          40.8 |                  2.3 |
 
 LightGBM with the full model's tuned parameters, mean of 3 seeds; paired-bootstrap 90% intervals.

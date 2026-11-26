@@ -36,20 +36,20 @@ Common subset where a Transfermarkt value ≥30 days before the deal exists (n =
 |:--------------------------------------------|----:|:--------|----------:|:------------|:------------|
 | TM baseline (≥30d)                          | 833 | 50.9%   |     0.694 | 25.9%       | 47.9%       |
 | TM × real-time ratio                        | 833 | 50.0%   |     0.689 | 26.9%       | 49.9%       |
-| Ridge, stats only                           | 833 | 50.8%   |     0.685 | 22.8%       | 48.6%       |
-| Ridge, with TM                              | 833 | 43.2%   |     0.578 | 28.9%       | 57.4%       |
-| LightGBM stats-only                         | 833 | 47.1%   |     0.639 | 27.4%       | 53.1%       |
-| LightGBM TM-corrected                       | 833 | 40.2%   |     0.542 | 31.8%       | 61.7%       |
+| Ridge, stats only                           | 833 | 50.8%   |     0.669 | 24.6%       | 48.9%       |
+| Ridge, with TM                              | 833 | 44.2%   |     0.572 | 28.1%       | 57.6%       |
+| LightGBM stats-only                         | 833 | 45.4%   |     0.617 | 28.1%       | 54.7%       |
+| LightGBM TM-corrected                       | 833 | 40.1%   |     0.539 | 31.2%       | 62.7%       |
 | TM transfers-table value (leaky, reference) | 833 | 44.4%   |     0.642 | 28.8%       | 53.1%       |
 
 All validation rows (n = 883; the TM baseline cannot price rows without a TM value):
 
 | model                 |   n | MdAPE   |   MAE_log | within_25   | within_50   |
 |:----------------------|----:|:--------|----------:|:------------|:------------|
-| Ridge, stats only     | 883 | 52.2%   |     0.697 | 22.3%       | 47.2%       |
-| Ridge, with TM        | 883 | 44.6%   |     0.594 | 27.6%       | 56.3%       |
-| LightGBM stats-only   | 883 | 48.6%   |     0.651 | 26.7%       | 51.8%       |
-| LightGBM TM-corrected | 883 | 41.3%   |     0.558 | 30.9%       | 59.9%       |
+| Ridge, stats only     | 883 | 52.3%   |     0.677 | 23.8%       | 47.6%       |
+| Ridge, with TM        | 883 | 45.1%   |     0.586 | 27.1%       | 56.3%       |
+| LightGBM stats-only   | 883 | 47.2%   |     0.628 | 27.2%       | 53.2%       |
+| LightGBM TM-corrected | 883 | 41.0%   |     0.556 | 30.0%       | 60.8%       |
 
 TM baseline scale factor (fit on train, as the brief specifies): ×1.250.
 "TM × real-time ratio" instead multiplies the TM value by the median fee/TM ratio of deals in the prior
@@ -66,40 +66,40 @@ TM-corrected model uses the same real-time-adjusted TM value (`log_tm_adj`).
 
 | fee_band   |   n | TM baseline (≥30d)   | TM × real-time ratio   | Ridge, stats only   | Ridge, with TM   | LightGBM stats-only   | LightGBM TM-corrected   |
 |:-----------|----:|:---------------------|:-----------------------|:--------------------|:-----------------|:----------------------|:------------------------|
-| <€5m       | 594 | 56.3%                | 54.2%                  | 50.9%               | 47.1%            | 49.1%                 | 45.1%                   |
-| €5–20m     | 179 | 40.6%                | 39.3%                  | 51.7%               | 40.3%            | 42.8%                 | 32.5%                   |
-| €20–50m    |  51 | 26.1%                | 29.1%                  | 45.0%               | 30.7%            | 43.9%                 | 19.1%                   |
-| €50m+      |   9 | 13.2%                | 16.6%                  | 28.3%               | 15.8%            | 36.0%                 | 35.6%                   |
+| <€5m       | 594 | 56.3%                | 54.2%                  | 51.0%               | 47.0%            | 48.6%                 | 43.1%                   |
+| €5–20m     | 179 | 40.6%                | 39.3%                  | 51.8%               | 40.9%            | 45.1%                 | 35.9%                   |
+| €20–50m    |  51 | 26.1%                | 29.1%                  | 46.5%               | 29.0%            | 30.1%                 | 18.7%                   |
+| €50m+      |   9 | 13.2%                | 16.6%                  | 21.5%               | 14.8%            | 34.9%                 | 31.9%                   |
 
 **By buying league**
 
 | buying_league   |   n | TM baseline (≥30d)   | TM × real-time ratio   | Ridge, stats only   | Ridge, with TM   | LightGBM stats-only   | LightGBM TM-corrected   |
 |:----------------|----:|:---------------------|:-----------------------|:--------------------|:-----------------|:----------------------|:------------------------|
-| Bundesliga      |  47 | 40.6%                | 36.5%                  | 54.0%               | 47.5%            | 45.4%                 | 40.7%                   |
-| LaLiga          |  53 | 42.7%                | 45.8%                  | 42.0%               | 43.7%            | 35.2%                 | 34.5%                   |
-| Ligue 1         |  64 | 50.0%                | 43.1%                  | 50.4%               | 37.7%            | 47.6%                 | 34.2%                   |
-| Other           | 487 | 57.1%                | 55.0%                  | 51.2%               | 45.3%            | 49.1%                 | 44.2%                   |
-| Premier League  |  85 | 48.1%                | 44.5%                  | 55.8%               | 41.3%            | 48.0%                 | 35.6%                   |
-| Serie A         |  97 | 41.1%                | 39.4%                  | 49.5%               | 39.8%            | 42.8%                 | 35.4%                   |
+| Bundesliga      |  47 | 40.6%                | 36.5%                  | 53.5%               | 46.3%            | 49.0%                 | 38.7%                   |
+| LaLiga          |  53 | 42.7%                | 45.8%                  | 33.8%               | 38.2%            | 28.7%                 | 39.8%                   |
+| Ligue 1         |  64 | 50.0%                | 43.1%                  | 45.3%               | 33.7%            | 43.1%                 | 34.1%                   |
+| Other           | 487 | 57.1%                | 55.0%                  | 52.7%               | 45.4%            | 48.3%                 | 42.2%                   |
+| Premier League  |  85 | 48.1%                | 44.5%                  | 57.5%               | 43.1%            | 45.4%                 | 34.3%                   |
+| Serie A         |  97 | 41.1%                | 39.4%                  | 50.0%               | 38.6%            | 44.2%                 | 34.0%                   |
 
 **By position group**
 
 | position_group   |   n | TM baseline (≥30d)   | TM × real-time ratio   | Ridge, stats only   | Ridge, with TM   | LightGBM stats-only   | LightGBM TM-corrected   |
 |:-----------------|----:|:---------------------|:-----------------------|:--------------------|:-----------------|:----------------------|:------------------------|
-| Attack           | 298 | 50.7%                | 52.0%                  | 52.4%               | 41.7%            | 48.2%                 | 37.7%                   |
-| Defender         | 240 | 52.2%                | 52.2%                  | 47.9%               | 45.5%            | 42.4%                 | 41.8%                   |
-| Goalkeeper       |  43 | 48.4%                | 44.0%                  | 51.3%               | 40.3%            | 43.9%                 | 35.4%                   |
-| Midfield         | 252 | 52.0%                | 44.8%                  | 51.3%               | 42.8%            | 50.5%                 | 44.1%                   |
+| Attack           | 298 | 50.7%                | 52.0%                  | 52.5%               | 41.8%            | 48.2%                 | 39.2%                   |
+| Defender         | 240 | 52.2%                | 52.2%                  | 47.4%               | 44.6%            | 44.8%                 | 37.8%                   |
+| Goalkeeper       |  43 | 48.4%                | 44.0%                  | 48.2%               | 36.9%            | 41.6%                 | 40.1%                   |
+| Midfield         | 252 | 52.0%                | 44.8%                  | 55.7%               | 45.8%            | 43.1%                 | 42.1%                   |
 
 **By age band**
 
 | age_band   |   n | TM baseline (≥30d)   | TM × real-time ratio   | Ridge, stats only   | Ridge, with TM   | LightGBM stats-only   | LightGBM TM-corrected   |
 |:-----------|----:|:---------------------|:-----------------------|:--------------------|:-----------------|:----------------------|:------------------------|
-| ≤20        | 142 | 59.6%                | 61.4%                  | 56.0%               | 45.9%            | 55.9%                 | 46.6%                   |
-| 21–23      | 280 | 40.8%                | 39.3%                  | 50.4%               | 45.5%            | 46.9%                 | 44.6%                   |
-| 24–26      | 226 | 50.0%                | 48.0%                  | 44.5%               | 37.2%            | 40.6%                 | 32.6%                   |
-| 27–29      | 143 | 70.5%                | 62.8%                  | 52.6%               | 43.2%            | 49.1%                 | 34.3%                   |
-| 30+        |  42 | 66.7%                | 57.0%                  | 54.7%               | 54.3%            | 56.2%                 | 42.3%                   |
+| ≤20        | 142 | 59.6%                | 61.4%                  | 54.4%               | 45.2%            | 50.4%                 | 41.6%                   |
+| 21–23      | 280 | 40.8%                | 39.3%                  | 53.6%               | 45.4%            | 47.7%                 | 42.5%                   |
+| 24–26      | 226 | 50.0%                | 48.0%                  | 44.0%               | 37.4%            | 40.6%                 | 36.5%                   |
+| 27–29      | 143 | 70.5%                | 62.8%                  | 51.1%               | 43.2%            | 45.6%                 | 36.4%                   |
+| 30+        |  42 | 66.7%                | 57.0%                  | 50.8%               | 50.6%            | 58.1%                 | 43.7%                   |
 
 
 ## 2. Market index
@@ -118,20 +118,20 @@ params), and the predictions converted back to money:
 
 | split   | deflator                             |    n |   MdAPE |   diff_vs_none |   diff_90lo |   diff_90hi |
 |:--------|:-------------------------------------|-----:|--------:|---------------:|------------:|------------:|
-| val     | none                                 |  883 |    47.1 |            0   |         0   |         0   |
-| val     | hedonic (carry-forward)              |  883 |    49.6 |            2.5 |         0.3 |         5.1 |
-| val     | hedonic nowcast                      |  883 |    48.3 |            1.2 |        -0.9 |         2.9 |
-| val     | hedonic nowcast + segments           |  883 |    48.9 |            1.8 |        -0.2 |         3.7 |
-| val     | hedonic nowcast, all-transfer sample |  883 |    48.4 |            1.4 |        -0.7 |         2.8 |
-| val     | repeat sales                         |  883 |    49.6 |            2.5 |         0.2 |         4.9 |
-| val     | TM market level                      |  883 |    56.8 |            9.7 |         6.1 |        13   |
-| calib   | none                                 | 1105 |    48.1 |            0   |         0   |         0   |
-| calib   | hedonic (carry-forward)              | 1105 |    48.3 |            0.2 |        -1   |         2.2 |
-| calib   | hedonic nowcast                      | 1105 |    48.5 |            0.3 |        -0.8 |         2   |
-| calib   | hedonic nowcast + segments           | 1105 |    47.3 |           -0.9 |        -2   |         1.1 |
-| calib   | hedonic nowcast, all-transfer sample | 1105 |    48.9 |            0.7 |        -0.5 |         2.4 |
-| calib   | repeat sales                         | 1105 |    48.8 |            0.6 |        -1.1 |         2.8 |
-| calib   | TM market level                      | 1105 |    47.4 |           -0.7 |        -2.6 |         1.6 |
+| val     | none                                 |  883 |    46.1 |            0   |         0   |         0   |
+| val     | hedonic (carry-forward)              |  883 |    48   |            1.9 |        -0.7 |         3.6 |
+| val     | hedonic nowcast                      |  883 |    48.4 |            2.3 |        -0.4 |         3.4 |
+| val     | hedonic nowcast + segments           |  883 |    47   |            0.9 |        -1.5 |         2.2 |
+| val     | hedonic nowcast, all-transfer sample |  883 |    47.9 |            1.8 |        -0.6 |         3.2 |
+| val     | repeat sales                         |  883 |    48.1 |            2   |        -0.2 |         3.8 |
+| val     | TM market level                      |  883 |    52   |            5.9 |         2   |         9.8 |
+| calib   | none                                 | 1105 |    45.4 |            0   |         0   |         0   |
+| calib   | hedonic (carry-forward)              | 1105 |    45.2 |           -0.2 |        -1.8 |         1.3 |
+| calib   | hedonic nowcast                      | 1105 |    45   |           -0.3 |        -1.6 |         1.4 |
+| calib   | hedonic nowcast + segments           | 1105 |    45   |           -0.3 |        -1.9 |         1.3 |
+| calib   | hedonic nowcast, all-transfer sample | 1105 |    44.9 |           -0.5 |        -2   |         1.3 |
+| calib   | repeat sales                         | 1105 |    47.3 |            2   |        -0   |         4.2 |
+| calib   | TM market level                      | 1105 |    45.9 |            0.5 |        -1.4 |         2.7 |
 
 *(MdAPE and differences in percentage points.)* On validation the lowest MdAPE is **no deflator**, but
 its lead over the hedonic nowcast is within noise (90% CI includes 0), and on calibration all methods
@@ -147,13 +147,13 @@ the Premier League-buyer drift, section 4).
 
 | model        | interval      |   below_q10 |   above_q90 |   coverage |   median_width_ratio |
 |:-------------|:--------------|------------:|------------:|-----------:|---------------------:|
-| Stats-only   | raw quantiles |        18.8 |        11.8 |       69.4 |                 6.89 |
-| Stats-only   | CQR           |        14.6 |         8.8 |       76.6 |                 8.48 |
-| TM-corrected | raw quantiles |        16.6 |        11.7 |       71.7 |                 5.22 |
-| TM-corrected | CQR           |        15.3 |         9.4 |       75.3 |                 5.87 |
+| Stats-only   | raw quantiles |        18.2 |        13.9 |       67.8 |                 6.01 |
+| Stats-only   | CQR           |        15.6 |        10.8 |       73.6 |                 7.34 |
+| TM-corrected | raw quantiles |        16.5 |        13.4 |       70.1 |                 5.01 |
+| TM-corrected | CQR           |        14.2 |        10.3 |       75.5 |                 5.89 |
 
 `median_width_ratio` = median of (upper / lower) bound. CQR offsets were fit on the calibration split
-(stats-only q̂ = 0.104, TM-corrected q̂ = 0.059 log points)
+(stats-only q̂ = 0.100, TM-corrected q̂ = 0.081 log points)
 and are evaluated here on validation, which is held out from both training and calibration.
 
 ## 4. Diagnostics: errors by window and segment
@@ -166,12 +166,12 @@ time (flag if |t| > 2):
 
 | model                 | segment      |   slope_per_year |    t |   windows | flag   |
 |:----------------------|:-------------|-----------------:|-----:|----------:|:-------|
-| LightGBM TM-corrected | all          |            0.021 | 1.36 |        14 | False  |
-| LightGBM TM-corrected | PL buyers    |            0.022 | 1.02 |         8 | False  |
-| LightGBM TM-corrected | Other buyers |            0.017 | 1.19 |        14 | False  |
-| LightGBM TM-corrected | Top-end      |            0.034 | 1.13 |         7 | False  |
-| LightGBM TM-corrected | Rest         |            0.019 | 1.3  |        14 | False  |
-| LightGBM stats-only   | all          |            0.026 | 2.02 |        14 | True   |
+| LightGBM TM-corrected | all          |            0.015 | 0.89 |        14 | False  |
+| LightGBM TM-corrected | PL buyers    |            0.026 | 1.16 |         8 | False  |
+| LightGBM TM-corrected | Other buyers |            0.011 | 0.63 |        14 | False  |
+| LightGBM TM-corrected | Top-end      |            0.023 | 0.72 |         7 | False  |
+| LightGBM TM-corrected | Rest         |            0.013 | 0.8  |        14 | False  |
+| LightGBM stats-only   | all          |            0.019 | 1.35 |        14 | False  |
 
 Windows with fewer than 30 deals are excluded. **Drift found and partly fixed:** a first
 run flagged upward drift overall (the model over-priced post-2020 deals by ~10%). Cause: the median
@@ -180,7 +180,7 @@ ratio over-price later deals. Using the real-time ratio (`log_tm_adj`) removed t
 At checkpoint 1 PL buyers were still flagged (t = +2.16 with the un-segmented hedonic nowcast:
 under-priced in 2015–17, the Premier League TV-deal surge). The deflator was then switched to the
 segmented index (checkpoint 1 decision), which removed it. **Currently flagged:**
-LightGBM stats-only / all (t = +2.02).
+none.
 
 ## 5. Explanations (SHAP)
 
@@ -190,14 +190,16 @@ LightGBM stats-only / all (t = +2.02).
 
 Group importance, TM-corrected:
 
-| group         |   mean_abs_shap |
-|:--------------|----------------:|
-| H_crowd       |           0.588 |
-| A_base        |           0.461 |
-| B_performance |           0.065 |
-| D_age_index   |           0.051 |
-| G_momentum    |           0.048 |
-| C_experience  |           0.021 |
+| group          |   mean_abs_shap |
+|:---------------|----------------:|
+| H_crowd        |           0.491 |
+| A_base         |           0.451 |
+| E_hype         |           0.156 |
+| D_age_index    |           0.096 |
+| B_performance  |           0.081 |
+| G_momentum     |           0.059 |
+| C_experience   |           0.026 |
+| F_availability |           0.012 |
 
 ## 6. Features and components
 
